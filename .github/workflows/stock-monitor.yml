@@ -1,0 +1,47 @@
+name: DWC Havelock Stock Monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check-stock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore state cache
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: dwc-state-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            dwc-state-${{ runner.os }}-
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Check DWC Havelock stock
+        env:
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EMAIL_FROM:       ${{ secrets.EMAIL_FROM }}
+          EMAIL_PASSWORD:   ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_TO:         ${{ secrets.EMAIL_TO }}
+        run: python src/checker.py
+
+      - name: Save state cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: dwc-state-${{ runner.os }}-${{ github.run_id }}
